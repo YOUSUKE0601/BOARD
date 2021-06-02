@@ -3,7 +3,9 @@ class BoardsController < ApplicationController
 
 
   def index
-    @boards = Board.page(params[:page])
+    #タグidがあった場合に、紐づいている掲示板のリストを取得。タグが渡されなかった時はBoards.allで取得
+    @boards = params[:tag_id].present? ? Tag.find(params[:tag_id]).boards : Board.all
+    @boards = @boards.page(params[:page])
   end
 
   def new
@@ -28,22 +30,28 @@ class BoardsController < ApplicationController
   end
 
   def edit
+    @board.attributes = flash[:board] if flash[:board] 
   end
 
   def update
-    @board.update(board_params)
-    redirect_to @board
+    if @board.update(board_params)
+      redirect_to @board
+    else
+      flash[:board] = @baord
+      flash[:error_messages] = @board.errors.full_messages
+      redirect_back fallback_location: @board
+    end
   end
 
   def destroy
-    @board.delete
+    @board.destroy
     redirect_to boards_path, flash: { notice: "「#{@board.title}」の掲示板が削除されました"}
   end
 
   private
 
   def board_params
-    params.require(:board).permit(:name, :title, :body)
+    params.require(:board).permit(:name, :title, :body, tag_ids: [])
   end
 
   def set_target_board
